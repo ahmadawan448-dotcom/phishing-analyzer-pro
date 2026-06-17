@@ -6,12 +6,12 @@ import time
 from typing import Optional
 from flask import current_app
 
-from core.rules_engine import analyze_email, analyze_url, analyze_headers
-from core.scoring import (
+from api.core.rules_engine import analyze_email, analyze_url, analyze_headers
+from api.core.scoring import (
     compute_final_score, score_to_verdict, build_indicators,
     generate_explanation, FinalVerdict
 )
-from services.ai_service import analyze_with_ai
+from api.services.ai_service import analyze_with_ai
 
 logger = logging.getLogger("phishing_analyzer.analyzer")
 

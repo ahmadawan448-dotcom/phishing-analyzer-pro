@@ -23,9 +23,25 @@ logger = logging.getLogger("phishing_analyzer")
 
 app = Flask(__name__)
 
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
 @app.after_request
 def add_cors(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    allowed_origins = [
+        origin.strip()
+        for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+        if origin.strip()
+    ]
+    request_origin = request.headers.get("Origin")
+    if "*" in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    elif request_origin in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = request_origin
+        response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
@@ -33,7 +49,7 @@ def add_cors(response):
 app.config.update(
     SECRET_KEY=os.getenv("SECRET_KEY", "dev-secret"),
     MAX_CONTENT_LENGTH=1 * 1024 * 1024,
-    AI_TIMEOUT=int(os.getenv("AI_TIMEOUT", "10")),
+    AI_TIMEOUT=_env_int("AI_TIMEOUT", 10),
     AI_API_KEY=os.getenv("OPENAI_API_KEY", ""),
     AI_BASE_URL=os.getenv("AI_BASE_URL", "https://api.openai.com/v1"),
     AI_MODEL=os.getenv("AI_MODEL", "gpt-4o-mini"),
@@ -467,6 +483,7 @@ def server_error(e):
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
+    port = _env_int("PORT", 5000)
     app.run(host="0.0.0.0", port=port,
-            debug=os.getenv("FLASK_ENV") == "development")
+            debug=os.getenv("FLASK_ENV") == "development",
+            use_reloader=False)

@@ -4,7 +4,7 @@ API Routes — /api/analyze endpoint with full input validation.
 import logging
 import re
 from flask import Blueprint, request, jsonify
-from services.analyzer import run_email_analysis, run_url_analysis, run_header_analysis
+from api.services.analyzer import run_email_analysis, run_url_analysis, run_header_analysis
 
 logger = logging.getLogger("phishing_analyzer.routes")
 analyze_bp = Blueprint("analyze", __name__)
