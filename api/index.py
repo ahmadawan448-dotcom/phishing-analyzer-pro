@@ -1,50 +1,68 @@
+"""
+Phishing Analyzer Pro - Vercel Compatible Entry Point
+"""
+
 import os
-import sys
 import logging
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 
-# local env only
-if os.getenv("VERCEL") is None:
+# ----------------------------
+# Safe environment loading
+# ----------------------------
+try:
     from dotenv import load_dotenv
     load_dotenv()
+except Exception:
+    pass
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-
+# ----------------------------
+# Logging
+# ----------------------------
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("phishing_analyzer")
 
+# ----------------------------
+# Flask App
+# ----------------------------
 app = Flask(__name__)
-CORS(app, origins=os.getenv("ALLOWED_ORIGINS", "*"))
+CORS(app)
 
-app.config.update(
-    SECRET_KEY=os.getenv("SECRET_KEY", "dev-secret-change-in-prod"),
-    MAX_CONTENT_LENGTH=1 * 1024 * 1024,
-    AI_TIMEOUT=int(os.getenv("AI_TIMEOUT") or 10),
-    AI_API_KEY=os.getenv("OPENAI_API_KEY", ""),
-    AI_BASE_URL=os.getenv("AI_BASE_URL", "https://api.openai.com/v1"),
-    AI_MODEL=os.getenv("AI_MODEL", "gpt-4o-mini"),
-    USE_AI=os.getenv("USE_AI", "false").lower() == "true",
-)
+# ----------------------------
+# Import Blueprint (SAFE)
+# IMPORTANT: no "api." prefix on Vercel
+# ----------------------------
+try:
+    from routes.analyze import analyze_bp
+    app.register_blueprint(analyze_bp, url_prefix="/api")
+except Exception as e:
+    logger.error(f"Failed to load blueprint: {e}")
 
-from api.routes.analyze import analyze_bp
-app.register_blueprint(analyze_bp, url_prefix="/api")
-
-
+# ----------------------------
+# Health Check Route
+# ----------------------------
 @app.route("/api/health", methods=["GET"])
 def health():
-    return {"status": "ok", "version": "1.0.0"}
+    return jsonify({
+        "status": "ok",
+        "message": "Phishing Analyzer Pro is running",
+        "version": "1.0.0"
+    })
 
+# ----------------------------
+# Error Handlers
+# ----------------------------
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "Endpoint not found"}), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    logger.error(f"Unhandled error: {e}")
-    return {"error": "Internal server error"}, 500
+    logger.error(f"Server error: {e}")
+    return jsonify({"error": "Internal server error"}), 500
 
-
-# Vercel entry point
+# ----------------------------
+# Vercel Entry Point (IMPORTANT)
+# ----------------------------
 def handler(environ, start_response):
     return app(environ, start_response)
