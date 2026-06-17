@@ -11,10 +11,13 @@ import time
 from dataclasses import dataclass, field
 from typing import List, Optional
 from urllib.parse import urlparse
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 
 load_dotenv()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
 logging.basicConfig(level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -378,6 +381,18 @@ def mock_ai(rule_score: int, analysis_type: str):
 # ============================================================
 # ROUTES
 # ============================================================
+
+@app.route("/", methods=["GET"])
+def home():
+    return send_from_directory(ROOT_DIR, "index.html")
+
+
+@app.route("/<path:path>", methods=["GET"])
+def frontend_fallback(path):
+    if path.startswith("api/"):
+        return {"error": "Not found"}, 404
+    return send_from_directory(ROOT_DIR, "index.html")
+
 
 @app.route("/api/health", methods=["GET"])
 def health():
